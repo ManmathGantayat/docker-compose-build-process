@@ -112,17 +112,17 @@ sudo cp -r build/* /usr/share/nginx/html
 ### if you want to use internnal loadbalncer please go through below procress
 # Reverse Proxy & Backend Setup (Amazon Linux)
 
-This repository contains an Nginx reverse-proxy configuration that serves a React frontend and proxies API requests to a backend at private IP `172.31.23.9`.
+This repository contains an Nginx reverse-proxy configuration that serves a React frontend and proxies API requests to a backend at private IP or loadbalancer.
 
-This README explains how to install Nginx on Amazon Linux, deploy the provided `proxy.conf`, deploy a React build to Nginx, and set up a sample Node.js backend on an Amazon Linux instance (the backend expected at `172.31.23.9`).
+.
 
 ## Files
 - proxy.conf — Nginx server block (this file)
 
 ## Behavior summary (from `proxy.conf`)
 - Listens on port 80.
-- Routes requests starting with `/api/` to `http://172.31.23.9/`.
-  - Example: `GET /api/books` -> proxied to `http://172.31.23.9/books`.
+- Routes requests starting with `/api/` to private ip or loadbalncer`.
+  - Example: `GET /api/books` -> proxied to privateip or loadbalncer
 - Serves a React single-page app from `/usr/share/nginx/html` and falls back to `index.html` for client routes.
 
 
@@ -152,9 +152,6 @@ sudo vi /etc/nginx/conf.d/reverse-proxy.conf
 sudo nginx -t
 sudo systemctl reload nginx
 ```
-
-Notes about the included `proxy.conf`:
-- The `location ^~ /api/` block uses `proxy_pass http://172.31.23.9/;` so requests like `/api/foo` are forwarded to `http://172.31.23.9/foo` (the `/api/` prefix is removed). This is intentional to keep backend routes unchanged.
 
 ## Deploy React build to Nginx
 On the machine where you build the React app (or directly on the nginx server):
