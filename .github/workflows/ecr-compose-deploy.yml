@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:   # allows manual rerun from UI
 
 env:
   AWS_REGION: us-east-1
@@ -61,8 +62,10 @@ jobs:
             set -e
             echo "Using ECR Registry: $ECR_REGISTRY"
 
+            # Verify IAM role
             aws sts get-caller-identity
 
+            # Login to ECR (IAM role based)
             aws ecr get-login-password --region us-east-1 \
               | docker login --username AWS --password-stdin $ECR_REGISTRY
 
