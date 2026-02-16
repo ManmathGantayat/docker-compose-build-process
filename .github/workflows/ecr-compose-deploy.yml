@@ -1,0 +1,65 @@
+name: Build, Push to ECR & Deploy via Docker Compose
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  FRONTEND_IMAGE: frontend-app
+  BACKEND_IMAGE: backend-app
+  MYSQL_IMAGE: mysql-db
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Backend Image
+        run: |
+          docker build -t $ECR_REGISTRY/$BACKEND_IMAGE:latest ./backend
+          docker push $ECR_REGISTRY/$BACKEND_IMAGE:latest
+
+      - name: Build & Push Frontend Image
+        run: |
+          docker build -t $ECR_REGISTRY/$FRONTEND_IMAGE:latest ./client
+          docker push $ECR_REGISTRY/$FRONTEND_IMAGE:latest
+
+      - name: Build & Push MySQL Image
+        run: |
+          docker build -t $ECR_REGISTRY/$MYSQL_IMAGE:latest ./mysql
+          docker push $ECR_REGISTRY/$MYSQL_IMAGE:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2 using Docker Compose
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            set -e
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
+            cd /home/ec2-user/app/docker-compose-build-process
+            docker compose pull
+            docker compose down
+            docker compose up -d
