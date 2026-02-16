@@ -63,17 +63,25 @@ pipeline {
         stage('Deploy on EC2 (Docker Compose)') {
             steps {
                 sshagent(['ec2-ssh']) {
-                    sh '''
-                      ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST << EOF
-                        aws sts get-caller-identity
-                        aws ecr get-login-password --region us-east-1 \
-                          | docker login --username AWS --password-stdin $ECR_REGISTRY
-                        cd $DEPLOY_PATH
-                        docker compose pull
-                        docker compose down
-                        docker compose up -d
-                      EOF
-                    '''
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} '
+                      set -e
+                      echo "Connected to EC2"
+
+                      aws sts get-caller-identity
+
+                      aws ecr get-login-password --region ${AWS_REGION} \
+                        | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+
+                      cd ${DEPLOY_PATH}
+
+                      docker compose pull
+                      docker compose down
+                      docker compose up -d
+
+                      echo "Deployment completed successfully"
+                    '
+                    """
                 }
             }
         }
